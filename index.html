@@ -337,20 +337,26 @@
             margin: 0;
         }
 
-        /* Chapter */
+        /* Chapter - visible by default, JS adds animation */
         .chapter {
             padding: 6rem 0;
             border-bottom: 1px solid var(--cream-dark);
-            opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 0.6s ease, transform 0.6s ease;
+            opacity: 1;
+            transform: translateY(0);
             color: #2D2419;
             color: var(--walnut, #2D2419);
             background: #FAF8F5;
             background: var(--cream, #FAF8F5);
         }
 
-        .chapter.visible {
+        /* Progressive enhancement: fade-in animation when JS works */
+        .chapter.animate {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .chapter.animate.visible {
             opacity: 1;
             transform: translateY(0);
         }
@@ -1974,6 +1980,9 @@ For each technology choice, include 1-2 sentences explaining:
         }, observerOptions);
 
         chapters.forEach(chapter => {
+            // Add animate class for progressive enhancement
+            // Content visible by default if JS fails
+            chapter.classList.add('animate');
             chapterObserver.observe(chapter);
         });
 
