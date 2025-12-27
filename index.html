@@ -1,0 +1,2008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The AI Workflow — A Practitioner's Guide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cream: #FAF8F5;
+            --cream-dark: #F0EBE3;
+            --walnut: #2D2419;
+            --walnut-light: #4A3F31;
+            --sienna: #C4513C;
+            --sienna-light: #E8705B;
+            --sage: #7D8B75;
+            --gold: #C9A962;
+            --paper-shadow: rgba(45, 36, 25, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            font-size: 18px;
+        }
+
+        body {
+            font-family: 'Source Sans 3', Georgia, serif;
+            background: var(--cream);
+            color: var(--walnut);
+            line-height: 1.7;
+            font-weight: 400;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Noise texture overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            z-index: 1000;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        ::selection {
+            background: var(--sienna);
+            color: var(--cream);
+        }
+
+        /* Typography */
+        h1, h2, h3, h4 {
+            font-family: 'Cormorant Garamond', Georgia, serif;
+            font-weight: 600;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+
+        h1 { font-size: clamp(2.5rem, 8vw, 5rem); }
+        h2 { font-size: clamp(1.8rem, 4vw, 2.8rem); }
+        h3 { font-size: clamp(1.3rem, 2.5vw, 1.8rem); }
+        h4 { font-size: 1.1rem; font-weight: 500; }
+
+        p {
+            margin-bottom: 1.5rem;
+        }
+
+        a {
+            color: var(--sienna);
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.3s ease;
+        }
+
+        a:hover {
+            border-bottom-color: var(--sienna);
+        }
+
+        strong {
+            font-weight: 600;
+            color: var(--walnut);
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            background: var(--cream-dark);
+            padding: 0.15em 0.4em;
+            border-radius: 3px;
+        }
+
+        pre {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            background: var(--walnut);
+            color: var(--cream);
+            padding: 1.5rem;
+            border-radius: 4px;
+            overflow-x: auto;
+            margin: 2rem 0;
+            line-height: 1.6;
+        }
+
+        pre code {
+            background: none;
+            padding: 0;
+        }
+
+        /* Layout */
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        .wide-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 2rem;
+        }
+
+        /* Navigation */
+        .nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--cream);
+            border-bottom: 1px solid var(--cream-dark);
+            z-index: 100;
+            padding: 0.8rem 0;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .nav.visible {
+            transform: translateY(0);
+        }
+
+        .nav-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--walnut);
+        }
+
+        .nav-progress {
+            height: 2px;
+            background: var(--sienna);
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        /* Hero */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 4rem 2rem;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(ellipse at center, var(--cream-dark) 0%, transparent 70%);
+            opacity: 0.5;
+            animation: slowRotate 60s linear infinite;
+        }
+
+        @keyframes slowRotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-number {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(8rem, 25vw, 20rem);
+            font-weight: 400;
+            color: var(--cream-dark);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 0;
+            opacity: 0.5;
+        }
+
+        .hero-subtitle {
+            font-family: 'Source Sans 3', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--sienna);
+            margin-bottom: 2rem;
+        }
+
+        .hero h1 {
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .hero-description {
+            font-size: 1.1rem;
+            max-width: 500px;
+            margin: 0 auto 3rem;
+            color: var(--walnut-light);
+            font-style: italic;
+            font-family: 'Cormorant Garamond', serif;
+        }
+
+        .scroll-indicator {
+            position: absolute;
+            bottom: 3rem;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--walnut-light);
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            animation: float 2s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(8px); }
+        }
+
+        .scroll-indicator svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        /* Table of Contents */
+        .toc {
+            padding: 6rem 0;
+            background: var(--walnut);
+            color: var(--cream);
+            position: relative;
+        }
+
+        .toc::before {
+            content: 'Contents';
+            position: absolute;
+            top: 3rem;
+            left: 2rem;
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 0.9rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--gold);
+        }
+
+        .toc-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .toc-item {
+            display: flex;
+            align-items: baseline;
+            gap: 1rem;
+            padding: 1.2rem 1.5rem;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            color: var(--cream);
+        }
+
+        .toc-item:hover {
+            background: rgba(255,255,255,0.08);
+            border-color: var(--gold);
+            transform: translateY(-2px);
+        }
+
+        .toc-number {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.8rem;
+            font-weight: 400;
+            color: var(--gold);
+            opacity: 0.7;
+        }
+
+        .toc-text h4 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 0.3rem;
+            color: var(--cream);
+        }
+
+        .toc-text p {
+            font-size: 0.8rem;
+            color: rgba(250, 248, 245, 0.6);
+            margin: 0;
+        }
+
+        /* Chapter */
+        .chapter {
+            padding: 6rem 0;
+            border-bottom: 1px solid var(--cream-dark);
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        .chapter.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .chapter-header {
+            margin-bottom: 4rem;
+            position: relative;
+        }
+
+        .chapter-number {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(6rem, 15vw, 12rem);
+            font-weight: 400;
+            color: var(--cream-dark);
+            position: absolute;
+            top: -2rem;
+            left: -1rem;
+            z-index: 0;
+            line-height: 1;
+            pointer-events: none;
+        }
+
+        .chapter-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: var(--sienna);
+            margin-bottom: 0.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .chapter-title {
+            position: relative;
+            z-index: 1;
+        }
+
+        .chapter-intro {
+            font-size: 1.15rem;
+            color: var(--walnut-light);
+            font-style: italic;
+            font-family: 'Cormorant Garamond', serif;
+            border-left: 3px solid var(--sienna);
+            padding-left: 1.5rem;
+            margin: 2rem 0 3rem;
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 4rem;
+        }
+
+        .section-title {
+            color: var(--walnut);
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--cream-dark);
+        }
+
+        .subsection {
+            margin-bottom: 2.5rem;
+        }
+
+        .subsection-title {
+            font-family: 'Source Sans 3', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--sienna);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Pull Quote */
+        .pull-quote {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            font-style: italic;
+            font-weight: 400;
+            color: var(--walnut);
+            text-align: center;
+            padding: 3rem 2rem;
+            margin: 3rem -2rem;
+            background: linear-gradient(135deg, var(--cream-dark) 0%, var(--cream) 100%);
+            border-top: 1px solid var(--cream-dark);
+            border-bottom: 1px solid var(--cream-dark);
+            position: relative;
+        }
+
+        .pull-quote::before {
+            content: '"';
+            font-size: 6rem;
+            position: absolute;
+            top: -1rem;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--sienna);
+            opacity: 0.2;
+            font-style: normal;
+            line-height: 1;
+        }
+
+        /* Callout Box */
+        .callout {
+            background: var(--cream-dark);
+            border-left: 4px solid var(--sienna);
+            padding: 1.5rem 2rem;
+            margin: 2rem 0;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .callout-title {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--sienna);
+            margin-bottom: 0.5rem;
+        }
+
+        .callout p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Tables */
+        .table-wrapper {
+            overflow-x: auto;
+            margin: 2rem 0;
+            border: 1px solid var(--cream-dark);
+            border-radius: 4px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        th {
+            background: var(--walnut);
+            color: var(--cream);
+            font-family: 'Source Sans 3', sans-serif;
+            font-weight: 600;
+            text-align: left;
+            padding: 1rem;
+            font-size: 0.8rem;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--cream-dark);
+            vertical-align: top;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:nth-child(even) {
+            background: rgba(240, 235, 227, 0.5);
+        }
+
+        /* Lists */
+        ul, ol {
+            margin-bottom: 1.5rem;
+            padding-left: 1.5rem;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+        }
+
+        li::marker {
+            color: var(--sienna);
+        }
+
+        /* Accordion */
+        .accordion {
+            margin: 2rem 0;
+        }
+
+        .accordion-item {
+            border: 1px solid var(--cream-dark);
+            border-radius: 4px;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+        }
+
+        .accordion-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 1.5rem;
+            background: var(--cream);
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .accordion-header:hover {
+            background: var(--cream-dark);
+        }
+
+        .accordion-header h4 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.1rem;
+            color: var(--walnut);
+        }
+
+        .accordion-icon {
+            width: 24px;
+            height: 24px;
+            transition: transform 0.3s ease;
+            color: var(--sienna);
+        }
+
+        .accordion-item.open .accordion-icon {
+            transform: rotate(45deg);
+        }
+
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.4s ease;
+        }
+
+        .accordion-item.open .accordion-content {
+            max-height: 2000px;
+        }
+
+        .accordion-inner {
+            padding: 1.5rem;
+            background: rgba(240, 235, 227, 0.3);
+        }
+
+        /* Tags */
+        .tag {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 0.3em 0.8em;
+            border-radius: 3px;
+            background: var(--cream-dark);
+            color: var(--walnut-light);
+        }
+
+        .tag--sienna {
+            background: var(--sienna);
+            color: var(--cream);
+        }
+
+        .tag--sage {
+            background: var(--sage);
+            color: var(--cream);
+        }
+
+        /* Comparison */
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .comparison-item {
+            padding: 1.5rem;
+            border-radius: 4px;
+        }
+
+        .comparison-item--bad {
+            background: rgba(196, 81, 60, 0.1);
+            border: 1px solid rgba(196, 81, 60, 0.3);
+        }
+
+        .comparison-item--good {
+            background: rgba(125, 139, 117, 0.1);
+            border: 1px solid rgba(125, 139, 117, 0.3);
+        }
+
+        .comparison-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 0.5rem;
+        }
+
+        .comparison-item--bad .comparison-label {
+            color: var(--sienna);
+        }
+
+        .comparison-item--good .comparison-label {
+            color: var(--sage);
+        }
+
+        @media (max-width: 600px) {
+            .comparison {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--walnut);
+            color: var(--cream);
+            padding: 4rem 0;
+            text-align: center;
+        }
+
+        .footer-content {
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .footer h3 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--gold);
+        }
+
+        .footer p {
+            font-size: 0.9rem;
+            color: rgba(250, 248, 245, 0.7);
+            margin-bottom: 0;
+        }
+
+        /* Mobile styles */
+        @media (max-width: 768px) {
+            html {
+                font-size: 16px;
+            }
+
+            .container, .wide-container {
+                padding: 0 1.5rem;
+            }
+
+            .chapter {
+                padding: 4rem 0;
+            }
+
+            .chapter-number {
+                font-size: 5rem;
+                top: -1rem;
+                left: 0;
+            }
+
+            .pull-quote {
+                margin: 2rem -1.5rem;
+                padding: 2rem 1.5rem;
+            }
+
+            .toc::before {
+                position: relative;
+                top: auto;
+                left: auto;
+                display: block;
+                margin-bottom: 2rem;
+            }
+
+            .hero-number {
+                font-size: 10rem;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-in {
+            animation: fadeInUp 0.8s ease forwards;
+        }
+
+        .delay-1 { animation-delay: 0.1s; }
+        .delay-2 { animation-delay: 0.2s; }
+        .delay-3 { animation-delay: 0.3s; }
+        .delay-4 { animation-delay: 0.4s; }
+
+        /* Prompt boxes */
+        .prompt-box {
+            background: var(--walnut);
+            color: var(--cream);
+            padding: 2rem;
+            border-radius: 4px;
+            margin: 2rem 0;
+            position: relative;
+        }
+
+        .prompt-box::before {
+            content: 'PROMPT';
+            position: absolute;
+            top: -0.6rem;
+            left: 1.5rem;
+            font-size: 0.65rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            background: var(--sienna);
+            color: var(--cream);
+            padding: 0.2rem 0.6rem;
+            border-radius: 2px;
+        }
+
+        .prompt-box pre {
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            font-size: 0.85rem;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <!-- Fixed Navigation -->
+    <nav class="nav" id="nav">
+        <div class="wide-container nav-inner">
+            <span class="nav-title">The AI Workflow</span>
+            <span id="currentSection" style="font-size: 0.8rem; color: var(--walnut-light);"></span>
+        </div>
+        <div class="nav-progress" id="progress"></div>
+    </nav>
+
+    <!-- Hero -->
+    <header class="hero">
+        <div class="hero-number">∞</div>
+        <div class="hero-content">
+            <p class="hero-subtitle animate-in">A Practitioner's Guide</p>
+            <h1 class="animate-in delay-1">The AI Workflow</h1>
+            <p class="hero-description animate-in delay-2">
+                From operator to manager. From doing to directing.<br>
+                A systematic approach to working with LLM-powered tools.
+            </p>
+        </div>
+        <div class="scroll-indicator">
+            <span>Begin</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14M5 12l7 7 7-7"/>
+            </svg>
+        </div>
+    </header>
+
+    <!-- Table of Contents -->
+    <section class="toc" id="contents">
+        <div class="wide-container">
+            <div class="toc-grid">
+                <a href="#phase-0" class="toc-item">
+                    <span class="toc-number">0</span>
+                    <div class="toc-text">
+                        <h4>Mindset Shifts</h4>
+                        <p>What LLMs actually are, and how to think about them</p>
+                    </div>
+                </a>
+                <a href="#phase-1" class="toc-item">
+                    <span class="toc-number">1</span>
+                    <div class="toc-text">
+                        <h4>Briefing</h4>
+                        <p>Defining what you're solving without assuming how</p>
+                    </div>
+                </a>
+                <a href="#phase-2" class="toc-item">
+                    <span class="toc-number">2</span>
+                    <div class="toc-text">
+                        <h4>Research & Validation</h4>
+                        <p>Verifying what's actually possible before committing</p>
+                    </div>
+                </a>
+                <a href="#phase-3" class="toc-item">
+                    <span class="toc-number">3</span>
+                    <div class="toc-text">
+                        <h4>Architecture</h4>
+                        <p>Building only on confirmed ground</p>
+                    </div>
+                </a>
+                <a href="#phase-4" class="toc-item">
+                    <span class="toc-number">4</span>
+                    <div class="toc-text">
+                        <h4>Execution</h4>
+                        <p>The three-interface pattern for autonomous work</p>
+                    </div>
+                </a>
+                <a href="#phase-5" class="toc-item">
+                    <span class="toc-number">5</span>
+                    <div class="toc-text">
+                        <h4>Testing & Iteration</h4>
+                        <p>From problems to fixes through feedback loops</p>
+                    </div>
+                </a>
+                <a href="#time-management" class="toc-item">
+                    <span class="toc-number">T</span>
+                    <div class="toc-text">
+                        <h4>Time Management</h4>
+                        <p>Rules for unpredictable time-to-result ratios</p>
+                    </div>
+                </a>
+                <a href="#mental-models" class="toc-item">
+                    <span class="toc-number">M</span>
+                    <div class="toc-text">
+                        <h4>Mental Models</h4>
+                        <p>Frameworks for thinking about AI tools</p>
+                    </div>
+                </a>
+                <a href="#tools" class="toc-item">
+                    <span class="toc-number">+</span>
+                    <div class="toc-text">
+                        <h4>Tools & Prompts</h4>
+                        <p>Setup, selection, and starter templates</p>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Phase 0: Mindset Shifts -->
+    <article class="chapter" id="phase-0">
+        <div class="container">
+            <header class="chapter-header">
+                <div class="chapter-number">0</div>
+                <p class="chapter-label">Phase Zero</p>
+                <h2 class="chapter-title">Mindset Shifts</h2>
+            </header>
+
+            <p class="chapter-intro">
+                Before using these tools effectively, you must understand what they actually are—not what you imagine them to be.
+            </p>
+
+            <section class="section">
+                <h3 class="section-title">What LLMs Actually Are</h3>
+                <p>An AI language model predicts the next word based on the words previously written and spoken by people. <strong>That's it. That's the whole function.</strong></p>
+                <p>Its basic nature is to produce word sequences that match the patterns it learned during training. Every LLM is trained on different sets of data—some bigger, some smaller, some with better quality. For simplicity: think of the training dataset as the Internet.</p>
+
+                <div class="callout">
+                    <p class="callout-title">Because of this basic nature:</p>
+                    <ul>
+                        <li>It doesn't understand what it's writing</li>
+                        <li>It doesn't reason</li>
+                        <li>It doesn't have goals</li>
+                    </ul>
+                    <p>Human mental work is very different. We use our minds to change our situation and keep developing. We understand what we write. We reason. We have goals.</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Multiplication Table Analogy</h3>
+                <p>Think about multiplication tables—maybe the first pattern-completion tool we all learned.</p>
+                <p><em>"Seven eights are fifty-six."</em> You memorize this sequence of words. It gives you the right answer, but you don't need to understand why. You just need the pattern.</p>
+                <p>The comparison is useful. Both multiplication tables and AI tools take mental work that used to be done individually and make it instantly available to everyone.</p>
+
+                <div class="callout">
+                    <p class="callout-title">The crucial difference</p>
+                    <p>7×8=56 is always true—it follows from how numbers work. LLMs give you <strong>probable patterns based on the Internet</strong>.</p>
+                    <p>We trust multiplication tables completely because they're always right. We check AI outputs because they're based on probabilities, not certainties.</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Dishwasher Analogy</h3>
+                <p>When explaining these tools to colleagues who don't use them, the dishwasher analogy helps.</p>
+                <p>A dishwasher doesn't copy hand-washing motions—it cleans dishes through a completely different method. Hot water circulation instead of scrubbing. This different method has different trade-offs:</p>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Dimension</th>
+                                <th>Hand Washing</th>
+                                <th>Dishwasher</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Time type</strong></td>
+                                <td>Sequential (your attention)</td>
+                                <td>Parallel (runs while you sleep)</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Visible progress</strong></td>
+                                <td>Clean immediately</td>
+                                <td>Dirty pile visible first</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>The same pattern applies to AI tools. They don't copy your thinking process—they produce outputs through probability distributions. <strong>The method is different; the trade-offs are different.</strong></p>
+
+                <div class="pull-quote">
+                    Colleagues evaluating the tool by "does it think like I do?" miss the point. The question is: does it produce good enough results through its method?
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Line: Abundant vs. Scarce Work</h3>
+
+                <p><strong>First:</strong> AI tools make certain mental work abundant. Work that relies on typical patterns, on probable patterns, becomes abundant. This follows directly from what the tool is.</p>
+
+                <p><strong>Second:</strong> When work becomes abundant, its value drops. This is basic supply and demand. When something scarce becomes abundant, and people need about the same amount of it, the price falls. Nobody decides this—it just happens.</p>
+
+                <p><strong>Third:</strong> Human work moves toward whatever is still scarce. People need to survive and grow. If abundant work pays less and scarce work pays more, people naturally focus where scarcity remains. This isn't strategy—it's cause and effect.</p>
+
+                <p><strong>Fourth:</strong> This line keeps moving. As AI tools improve, more types of work cross from scarce to abundant. The line where human work concentrates shifts.</p>
+
+                <div class="callout">
+                    <p class="callout-title">Where the Line Is Right Now</p>
+                    <p>There's a practical way to tell when work has become abundant: <strong>the one-prompt test.</strong></p>
+                    <p>When you can do something with just one prompt, it's crossed into abundant territory. Anyone with the tool can do it. It needs no special knowledge to guide it, no back-and-forth to refine it, no expertise to check if it's good.</p>
+                    <p>The line sits just past this point—where pattern-completion starts failing.</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Why People Push Back</h3>
+                <p>When someone has spent years building a specific mental skill—legal analysis, software design, medical diagnosis—and that skill suddenly becomes abundant, their way of making a living is genuinely at risk.</p>
+                <p>The pushback isn't irrational. It's accurate recognition that their situation has changed. Fear follows from real danger.</p>
+                <p><strong>Material conditions are the real causes.</strong> Economic security lets you experiment without risking your survival. Extra time and energy let you learn. Job security lets you fail without disaster.</p>
+                <p>These aren't character traits—they're conditions that determine what's possible.</p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Three Patterns of Response</h3>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Pattern</th>
+                                <th>Behavior</th>
+                                <th>Follows From</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>A: Reliable Use</strong></td>
+                                <td>Use tools only where outcomes are reliable from single prompts</td>
+                                <td>Understanding that these tasks are abundant, plus limited time to invest</td>
+                            </tr>
+                            <tr>
+                                <td><strong>B: Minimal/No Use</strong></td>
+                                <td>Avoid tools entirely or use minimally</td>
+                                <td>Not understanding the tools, or conditions that don't allow learning investment</td>
+                            </tr>
+                            <tr>
+                                <td><strong>C: Edge Investment</strong></td>
+                                <td>Invest time learning where tools help and where they fail</td>
+                                <td>Understanding pattern-completion, having conditions that allow experimentation</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>None of these is morally better. Each follows from conditions.</p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Manager Mindset</h3>
+                <p>Agentic CLIs can work for minutes or hours on complex tasks. The natural instinct is to watch—the streaming output is compelling, and curiosity about the process is real.</p>
+                <p><strong>Resist this instinct.</strong></p>
+                <p>Once you've given clear instructions and started autonomous execution, move on. Prepare the next briefing document. Work on something else. Check results when the LLM signals completion.</p>
+
+                <div class="pull-quote">
+                    This shift from "operator watching a tool" to "manager delegating work" takes practice. The productivity gains require it.
+                </div>
+
+                <p>The manager mindset also applies to review. You don't evaluate process; you evaluate output. Did it produce what you asked for? Does the result work? Those questions matter. How it got there doesn't.</p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Confidence Builds on Itself</h3>
+                <p>A pattern emerged across course participants: <strong>confidence compounds.</strong></p>
+                <p>Early attempts feel uncertain. "Will this work? Am I doing it right? What if I break something?" The uncertainty slows everything down.</p>
+                <p>Successful completions build confidence. Confidence enables faster attempts. Faster attempts produce more completions. The cycle accelerates.</p>
+
+                <div class="callout">
+                    <p class="callout-title">Key Insight</p>
+                    <p>"Once you get ahead of the technology, you don't lose that advantage." The learning curve is steep, but the plateau is high.</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">When It Fails, That's Information</h3>
+                <p>When attempts fail—when the output is unusable, when iteration doesn't improve it, when the time spent beats just doing it yourself—that failure tells you something.</p>
+                <p>It marks where the line currently sits. The task you tried still needs scarce human ability. Pattern-completion can't handle it reliably yet.</p>
+                <p><strong>This isn't about you being inadequate. It's data about the current state of the tool relative to your specific task.</strong></p>
+                <p>The line moves. A task that fails today might work in three months, six months, a year. Failures map the territory.</p>
+            </section>
+        </div>
+    </article>
+
+    <!-- Phase 1: Briefing -->
+    <article class="chapter" id="phase-1">
+        <div class="container">
+            <header class="chapter-header">
+                <div class="chapter-number">1</div>
+                <p class="chapter-label">Phase One</p>
+                <h2 class="chapter-title">Briefing</h2>
+            </header>
+
+            <p class="chapter-intro">
+                Define what you're solving without assuming how.
+            </p>
+
+            <section class="section">
+                <h3 class="section-title">Purpose</h3>
+                <p>This phase happens in the Web UI (Claude.ai, ChatGPT, or Gemini web). The interface matters: questions get answered methodically, prompts get edited before submission, each question gets processed carefully. <strong>This is where judgment happens</strong>—where you figure out what you actually want.</p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Process</h3>
+                <ol>
+                    <li>Open a web-based chatbot</li>
+                    <li>Describe your goal at a high level</li>
+                    <li>Let the LLM ask you questions for <strong>20-40 minutes</strong></li>
+                    <li>Answer each question carefully—each answer becomes an instruction</li>
+                    <li>Review the briefing document it produces</li>
+                    <li>Verify it captured what you actually requested</li>
+                </ol>
+
+                <div class="callout">
+                    <p class="callout-title">Why 40 minutes on requirements matters</p>
+                    <p>This feels slow. No coding yet. Nothing visible happening. But this is where the actual work occurs.</p>
+                    <p>The LLM asks: What problem does this solve? What are the essential features? What can wait for version two? How should the interface work? What data needs to be stored?</p>
+                    <p>Each question refines what will actually get built. Each answer becomes an instruction that the coding LLM will follow literally.</p>
+                    <p><strong>These are specifications for an agent that won't be able to ask follow-up questions.</strong></p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">What to Capture</h3>
+                <ul>
+                    <li><strong>Problem:</strong> What problem are we solving?</li>
+                    <li><strong>User:</strong> For whom? What's their context, skill level, situation?</li>
+                    <li><strong>Constraints:</strong> What limits exist? Time, budget, technology, regulations?</li>
+                    <li><strong>Success criteria:</strong> What does "done" look like?</li>
+                    <li><strong>Scope boundaries:</strong> What's in version 1? What can wait?</li>
+                </ul>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">What to Deliberately Exclude</h3>
+                <ul>
+                    <li>Technology choices</li>
+                    <li>Architecture decisions</li>
+                    <li>Implementation details</li>
+                    <li>Specific tools or frameworks</li>
+                </ul>
+
+                <div class="callout">
+                    <p class="callout-title">Critical Rule</p>
+                    <p>Deliberately leave the "how" blank. Don't let the LLM make technical assumptions at this stage.</p>
+                    <p><strong>The reason:</strong> if you combine problem definition with technical feasibility in one step, the LLM fills knowledge gaps with plausible-sounding fiction. Separating them prevents this.</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Document Length Guidelines</h3>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Context</th>
+                                <th>Target Length</th>
+                                <th>Rationale</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Solo project</td>
+                                <td>5-10 pages acceptable</td>
+                                <td>Only you need to read it</td>
+                            </tr>
+                            <tr>
+                                <td>Business person in team</td>
+                                <td>2-4 pages</td>
+                                <td>Must be digestible by all members</td>
+                            </tr>
+                            <tr>
+                                <td>Team alignment</td>
+                                <td>1 page assumptions + 2-3 page brief</td>
+                                <td>Everyone reads, nobody skips</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="callout">
+                    <p class="callout-title">The Team Math Problem</p>
+                    <p>Five people. Twenty pages each. One hundred pages total. Nobody reads a hundred pages. The documents become artifacts that exist but don't function.</p>
+                </div>
+            </section>
+        </div>
+    </article>
+
+    <!-- Phase 2: Research -->
+    <article class="chapter" id="phase-2">
+        <div class="container">
+            <header class="chapter-header">
+                <div class="chapter-number">2</div>
+                <p class="chapter-label">Phase Two</p>
+                <h2 class="chapter-title">Research & Validation</h2>
+            </header>
+
+            <p class="chapter-intro">
+                Before committing to any approach, verify what's actually possible. This phase prevents the hallucination trap: detailed plans built on fictional capabilities.
+            </p>
+
+            <section class="section">
+                <h3 class="section-title">The Hallucination Problem</h3>
+                <p>During the course, briefing document development for one project had the LLM confidently describe API capabilities that don't exist. Endpoints that aren't real. Features that were never implemented. The hallucinations were detailed and plausible.</p>
+                <p>The resulting briefing document specified an architecture that couldn't be built. <strong>Hours of work toward something impossible.</strong></p>
+
+                <div class="callout">
+                    <p class="callout-title">Root cause</p>
+                    <p>LLMs predict a world that <em>should</em> logically exist, not what <em>actually</em> exists.</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Examples of Probable but False Assumptions</h3>
+                <p>Consider these "probable" but false assumptions discovered during the course:</p>
+                <ul>
+                    <li>Adobe Analytics "should" have an MCP server—it's a major analytics platform. <strong>It doesn't.</strong></li>
+                    <li>QuickBooks "should" have a modern REST API—it's 2025. <strong>Check the actual documentation.</strong></li>
+                    <li>Looker "should" pull data in real-time. <strong>It can't—need to export to BigQuery first.</strong></li>
+                    <li>YouTube "should" let you download comments via API. <strong>Not how it works.</strong></li>
+                    <li>GA4 "should" handle unlimited concurrent API requests. <strong>It has rate limits that break with multiple users.</strong></li>
+                    <li>Google Ads MCP "should" be officially maintained. <strong>It's community-maintained.</strong></li>
+                </ul>
+                <p>All of these are probable patterns. An LLM writing about these systems will confidently describe them. <strong>None are true.</strong></p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Failure Mode Is Worse Than Wrong Answers</h3>
+                <p>When Claude Code hits a wall during implementation—when the API endpoint doesn't exist, when the feature isn't supported—it doesn't stop. <strong>It creates fake data to continue.</strong> Mock responses. Placeholder values.</p>
+                <p>The system appears to work. It runs without errors. But it's running on fabricated data.</p>
+
+                <div class="pull-quote">
+                    The architecture was solid. The code was clean. The data was fictional.
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Research Process</h3>
+
+                <div class="subsection">
+                    <p class="subsection-title">Step 1: Identify Assumptions</p>
+                    <p>Ask: "What are the top 10 assumptions this plan makes about external systems?"</p>
+                    <p>For each assumption about an external API, service, or capability:</p>
+                    <ul>
+                        <li>Does this API endpoint exist?</li>
+                        <li>Does this feature work as described?</li>
+                        <li>What are the rate limits?</li>
+                        <li>Is this officially supported or community-maintained?</li>
+                        <li>What are the actual capabilities vs. what "should" exist?</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <p class="subsection-title">Step 2: Verify Each Assumption</p>
+                    <ul>
+                        <li>Check real documentation, not LLM memory</li>
+                        <li>Use web search to find official sources</li>
+                        <li>Ask the LLM to cite sources you can verify</li>
+                        <li>Test assumptions against actual documentation</li>
+                        <li>Look for changelogs, deprecation notices, community issues</li>
+                    </ul>
+                </div>
+
+                <div class="subsection">
+                    <p class="subsection-title">Step 3: Document Confirmed Capabilities</p>
+                    <p>Format: "We confirmed [capability] exists via [source]. Limitations: [specific limits found]."</p>
+                </div>
+
+                <div class="subsection">
+                    <p class="subsection-title">Step 4: Flag Unverifiable Assumptions</p>
+                    <p>If you can't verify something, explicitly mark it as unconfirmed. Don't proceed as if it's true.</p>
+                </div>
+
+                <div class="callout">
+                    <p class="callout-title">Time Investment</p>
+                    <p>Ten minutes of research can prevent hours of building on false foundations.</p>
+                </div>
+            </section>
+        </div>
+    </article>
+
+    <!-- Phase 3: Architecture -->
+    <article class="chapter" id="phase-3">
+        <div class="container">
+            <header class="chapter-header">
+                <div class="chapter-number">3</div>
+                <p class="chapter-label">Phase Three</p>
+                <h2 class="chapter-title">Architecture</h2>
+            </header>
+
+            <p class="chapter-intro">
+                Build only on confirmed ground. Now—and only now—decide on structure.
+            </p>
+
+            <section class="section">
+                <h3 class="section-title">Technology Justification</h3>
+                <p>Architecture documents frequently list technology choices without explaining why.</p>
+                <p><em>"We'll use FastAPI." Why FastAPI? "We'll store data in BigQuery." Why BigQuery?</em></p>
+                <p>These documents answer "could this work?" but not "why is this the best choice?"</p>
+                <p><strong>The difference matters.</strong> When you can't explain why you chose something, you don't actually know if it's right.</p>
+
+                <div class="comparison">
+                    <div class="comparison-item comparison-item--bad">
+                        <p class="comparison-label">❌ Not this</p>
+                        <p>"The system will use FastAPI for the backend layer."</p>
+                    </div>
+                    <div class="comparison-item comparison-item--good">
+                        <p class="comparison-label">✓ This</p>
+                        <p>"FastAPI handles the backend. We chose it over Flask because we need async support for concurrent MCP calls, and over Express because the team has Python experience."</p>
+                    </div>
+                </div>
+
+                <p>Two sentences. Covers the reasoning. Makes the choice defensible.</p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Annotation Technique</h3>
+                <p>Define a mini-language at the start of your editing session:</p>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tag</th>
+                                <th>Meaning</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>[delete]</code></td>
+                                <td>Remove this section entirely</td>
+                            </tr>
+                            <tr>
+                                <td><code>[?]</code></td>
+                                <td>I don't understand this, needs clarification</td>
+                            </tr>
+                            <tr>
+                                <td><code>[wrong]</code></td>
+                                <td>This contradicts what I know</td>
+                            </tr>
+                            <tr>
+                                <td><code>→</code></td>
+                                <td>Change this to something else</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>Mark up the document. Paste the annotated version back to Claude with "Here's my feedback on your draft. Address each annotation."</p>
+                <p><strong>The goal:</strong> knowing every word in your final document. Not because you wrote each word, but because you approved each word through deliberate review.</p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Two-Tier Document Structure</h3>
+                <p>A tension emerged: 3 pages isn't enough for serious implementation, but 20 pages × 5 people doesn't work for collaboration.</p>
+                <p><strong>The solution is layers:</strong></p>
+
+                <div class="accordion">
+                    <div class="accordion-item">
+                        <div class="accordion-header">
+                            <h4>Tier 1: Assumptions Document (1 page)</h4>
+                            <svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                        </div>
+                        <div class="accordion-content">
+                            <div class="accordion-inner">
+                                <p>A short list of key decisions the architecture depends on. Not explanations—just statements.</p>
+                                <p>Examples:</p>
+                                <ul>
+                                    <li>"One MCP server per data source"</li>
+                                    <li>"No cross-platform queries in v1"</li>
+                                    <li>"Security handled by containerization, not code"</li>
+                                    <li>"All data stays local, no cloud storage"</li>
+                                </ul>
+                                <p>The purpose is alignment. The framing—"assumptions" rather than "decisions"—invites challenge.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <div class="accordion-header">
+                            <h4>Tier 2: Brief (2-3 pages, primarily business owner)</h4>
+                            <svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                        </div>
+                        <div class="accordion-content">
+                            <div class="accordion-inner">
+                                <p>Problem definition. Who it's for. What success looks like. Constraints. No technical implementation details.</p>
+                                <p>The brief is 80% the business person's document. Technical people read it to understand what problem they're solving.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <div class="accordion-header">
+                            <h4>Tier 3: Architecture (3-7 pages, primarily technical owner)</h4>
+                            <svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                        </div>
+                        <div class="accordion-content">
+                            <div class="accordion-inner">
+                                <p>How the system works. Technology choices with justifications. Component relationships. Data flows.</p>
+                                <p>The architecture is 80% the technical person's document. Business people read it to verify their requirements are addressed.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <div class="accordion-header">
+                            <h4>Tier 4: Deep Technical (as needed)</h4>
+                            <svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 5v14M5 12h14"/>
+                            </svg>
+                        </div>
+                        <div class="accordion-content">
+                            <div class="accordion-inner">
+                                <p>Implementation details. Code structure. Configuration specifics. API schemas.</p>
+                                <p>This tier exists for reference during implementation. It's not shared reading for the team—it's working documentation for whoever builds it.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <p><strong>The workflow:</strong> Everyone reads Tier 1 (assumptions) and Tier 2 (brief). Technical members read Tier 3 (architecture). Tier 4 is reference material.</p>
+            </section>
+        </div>
+    </article>
+
+    <!-- Phase 4: Execution -->
+    <article class="chapter" id="phase-4">
+        <div class="container">
+            <header class="chapter-header">
+                <div class="chapter-number">4</div>
+                <p class="chapter-label">Phase Four</p>
+                <h2 class="chapter-title">Execution</h2>
+            </header>
+
+            <p class="chapter-intro">
+                The three-interface pattern: Web UI for requirements, CLI for execution, testing environment for iteration.
+            </p>
+
+            <section class="section">
+                <h3 class="section-title">The Three Interfaces</h3>
+                <p>This division isn't arbitrary—it follows from what each interface does well.</p>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Interface</th>
+                                <th>Purpose</th>
+                                <th>When to Use</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Web UI</strong></td>
+                                <td>Requirements gathering, judgment, questions</td>
+                                <td>Phase 1: Briefing</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Claude Code (CLI)</strong></td>
+                                <td>Autonomous execution, file creation, code</td>
+                                <td>Phase 4: Building</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Testing Environment</strong></td>
+                                <td>Identify problems, describe fixes</td>
+                                <td>Phase 5: Iteration</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Briefing Document Handoff</h3>
+                <p>The briefing document becomes critical. It's the last chance for judgment to shape what gets built. Once Claude Code starts, it follows those instructions without anyone there to course-correct.</p>
+
+                <div class="callout">
+                    <p class="callout-title">Think of this document as...</p>
+                    <p>What you'd write for a developer who starts work tomorrow. They won't be able to ask questions while they work. Everything they need must be in writing.</p>
+                </div>
+
+                <p><strong>Before handoff:</strong></p>
+                <ul>
+                    <li>Read the briefing carefully</li>
+                    <li>Verify Claude understood correctly</li>
+                    <li>Check for misunderstandings</li>
+                    <li>Confirm nothing is missing</li>
+                </ul>
+                <p>This is the last checkpoint. After this, execution begins.</p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Permission Modes</h3>
+
+                <div class="subsection">
+                    <p class="subsection-title">Default Mode (Ask before each action)</p>
+                    <p>Should I create this file? Should I run this command? Should I install this package?</p>
+                    <p>This makes sense for learning. Each step becomes visible, understandable, controllable.</p>
+                </div>
+
+                <div class="subsection">
+                    <p class="subsection-title">Bypass Mode ("dangerously skip permissions")</p>
+                    <p>In this mode, Claude Code doesn't ask. It just executes. Fully autonomous.</p>
+                    <p>Give Claude Code instructions and walk away. Come back to a finished project.</p>
+                </div>
+
+                <div class="callout">
+                    <p class="callout-title">The Trade-off</p>
+                    <p>Pure autonomous approach isn't what you'd use for real work. It's too risky. You can't evaluate what you can't understand.</p>
+                    <p><strong>Better pattern:</strong> Stay involved. Watch what Claude Code does. Toggle between modes based on whether you need speed or oversight.</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">What Happens During Autonomous Execution</h3>
+                <p>When the briefing gets handed to Claude Code and autonomous mode is enabled:</p>
+                <p>Claude Code is creating folders, writing frontend code, writing backend code, setting up databases, installing dependencies, starting servers. <strong>Without supervision.</strong> No questions asked, no confirmations requested, no human judgment involved.</p>
+
+                <div class="pull-quote">
+                    This is the shift. Not "AI helps you code faster." But "AI codes while you're not there."
+                </div>
+
+                <p>When you return, there's a working application. Not perfect—bugs exist, some features don't work, some data is placeholder—but it runs.</p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Time Distribution Example</h3>
+                <p>From the course video demonstration (habit tracker app):</p>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Activity</th>
+                                <th>Time</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Answering questions (briefing)</td>
+                                <td>40 min</td>
+                                <td><span class="tag tag--sienna">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td>Reading the briefing</td>
+                                <td>5 min</td>
+                                <td><span class="tag tag--sienna">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td>First build (autonomous)</td>
+                                <td>15 min</td>
+                                <td><span class="tag tag--sage">Autonomous</span></td>
+                            </tr>
+                            <tr>
+                                <td>Testing</td>
+                                <td>10 min</td>
+                                <td><span class="tag tag--sienna">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td>Second iteration (autonomous)</td>
+                                <td>15 min</td>
+                                <td><span class="tag tag--sage">Autonomous</span></td>
+                            </tr>
+                            <tr>
+                                <td>Final review</td>
+                                <td>5 min</td>
+                                <td><span class="tag tag--sienna">Active</span></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Total</strong></td>
+                                <td><strong>90 min</strong></td>
+                                <td></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p><strong>Active participation:</strong> ~60 min</p>
+                <p><strong>Autonomous execution:</strong> ~30 min</p>
+            </section>
+        </div>
+    </article>
+
+    <!-- Phase 5: Testing -->
+    <article class="chapter" id="phase-5">
+        <div class="container">
+            <header class="chapter-header">
+                <div class="chapter-number">5</div>
+                <p class="chapter-label">Phase Five</p>
+                <h2 class="chapter-title">Testing & Iteration</h2>
+            </header>
+
+            <p class="chapter-intro">
+                The first version establishes the foundation. Testing identifies fixes. This is expected, not failure.
+            </p>
+
+            <section class="section">
+                <h3 class="section-title">Expected: First Version Has Problems</h3>
+                <p>Problems found in course projects:</p>
+                <ul>
+                    <li>Mobile UI rendering issues</li>
+                    <li>Statistics display not developed</li>
+                    <li>Placeholder data instead of real data</li>
+                    <li>Features that don't work as specified</li>
+                </ul>
+                <p>The first version shows what's possible. Testing reveals what to fix.</p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Testing Process</h3>
+                <ol>
+                    <li><strong>Test the output</strong> — Use it. Click things. Enter data. Try edge cases.</li>
+                    <li><strong>Identify problems</strong> — What's broken? What's missing? What's wrong?</li>
+                    <li><strong>Describe to Claude Code</strong> — Tell it what's broken. You don't debug; you describe. (Can include screenshots—Claude Code can "see" images)</li>
+                    <li><strong>Autonomous fix cycle</strong> — Claude Code debugs and fixes autonomously.</li>
+                    <li><strong>Test fixes</strong> — Check if the fix worked. Identify remaining problems.</li>
+                    <li><strong>Repeat</strong> — Build-test-feedback continues until outputs work.</li>
+                </ol>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Your Role in Testing</h3>
+                <p><strong>You don't debug problems. You tell Claude Code what's broken.</strong> It debugs and fixes autonomously.</p>
+
+                <div class="comparison">
+                    <div class="comparison-item comparison-item--bad">
+                        <p class="comparison-label">What you do</p>
+                        <ul>
+                            <li>Use the system</li>
+                            <li>Notice problems</li>
+                            <li>Describe problems clearly</li>
+                            <li>Verify fixes</li>
+                        </ul>
+                    </div>
+                    <div class="comparison-item comparison-item--good">
+                        <p class="comparison-label">What Claude Code does</p>
+                        <ul>
+                            <li>Diagnose causes</li>
+                            <li>Write fixes</li>
+                            <li>Run tests</li>
+                            <li>Implement changes</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </article>
+
+    <!-- Time Management -->
+    <article class="chapter" id="time-management">
+        <div class="container">
+            <header class="chapter-header">
+                <div class="chapter-number">T</div>
+                <p class="chapter-label">Essential</p>
+                <h2 class="chapter-title">Time Management</h2>
+            </header>
+
+            <p class="chapter-intro">
+                LLM work doesn't follow predictable time-to-result ratios. Without guardrails, you can lose entire days to conversations that go nowhere.
+            </p>
+
+            <section class="section">
+                <h3 class="section-title">The Problem</h3>
+                <p>Traditional work has predictable time-to-result ratios. Cooking dinner takes roughly an hour. A presentation takes roughly a day.</p>
+                <p>LLM work doesn't follow this pattern.</p>
+                <p>You can accomplish in one hour what would normally take a week. You can also spend three hours and produce nothing usable. <strong>The variance is enormous.</strong></p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Rule 1: Match the Traditional Time</h3>
+                <p>Before starting, estimate how long the task would take without LLM assistance. Give the LLM attempt that same amount of time.</p>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Traditional Time</th>
+                                <th>LLM Time Budget</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Writing an email</td>
+                                <td>20 minutes</td>
+                                <td>20 minutes</td>
+                            </tr>
+                            <tr>
+                                <td>Building a presentation</td>
+                                <td>3 hours</td>
+                                <td>3 hours</td>
+                            </tr>
+                            <tr>
+                                <td>Creating a report</td>
+                                <td>1 day</td>
+                                <td>1 day</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>If it's not working by then, stop. You still have time to do it yourself.</p>
+                <p><strong>This rule ensures you can't lose more than 2× the normal time on any task.</strong></p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Rule 2: The 2× Boundary</h3>
+                <p>Start LLM work only when you have double the time remaining before the deadline.</p>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Deadline</th>
+                                <th>Normal Time</th>
+                                <th>Start LLM By</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Friday</td>
+                                <td>3 hours</td>
+                                <td>Wednesday (6 hours out)</td>
+                            </tr>
+                            <tr>
+                                <td>Tomorrow noon</td>
+                                <td>2 hours</td>
+                                <td>Today (4 hours out)</td>
+                            </tr>
+                            <tr>
+                                <td>End of day</td>
+                                <td>1 hour</td>
+                                <td>2 hours before deadline</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <p>This protects against: LLM attempts that fail, provider outages, rate limits, unexpected complexity.</p>
+            </section>
+        </div>
+    </article>
+
+    <!-- Mental Models -->
+    <article class="chapter" id="mental-models">
+        <div class="container">
+            <header class="chapter-header">
+                <div class="chapter-number">M</div>
+                <p class="chapter-label">Frameworks</p>
+                <h2 class="chapter-title">Mental Models</h2>
+            </header>
+
+            <p class="chapter-intro">
+                Frameworks for thinking about these tools that emerged from practice.
+            </p>
+
+            <section class="section">
+                <h3 class="section-title">The Chat as Book</h3>
+                <p>Treat the conversation as reference material, not ephemeral exchange.</p>
+                <ul>
+                    <li>Copy important outputs to external documents</li>
+                    <li>Build a searchable record of what was decided</li>
+                    <li>Return to previous conversations for context</li>
+                    <li>Don't rely on memory—yours or the LLM's</li>
+                </ul>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Golden Retriever Problem</h3>
+                <p>LLMs are eager to please. They'll attempt tasks they can't do well. They'll confirm assumptions that seem plausible. They won't push back on bad ideas.</p>
+                <p><strong>Implication:</strong> You must provide the judgment. Don't mistake enthusiasm for capability.</p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The 20-Hour Pattern</h3>
+                <p>Initial attempts typically take about as long as doing the work yourself. You're learning to shape conditions—what prompts work, what iteration patterns help, when to stop and check.</p>
+                <p>After roughly 20 hours of this investment, the same work that took as long initially now finishes in a fraction of the time.</p>
+
+                <div class="callout">
+                    <p class="callout-title">The categorical shift</p>
+                    <p>Tasks you couldn't attempt at all before—writing Python code, for instance—become possible. Not at expert level, but good enough for your purposes with checking.</p>
+                    <p>From "I can't attempt this without years of training" to "I can attempt this with tool plus limited checking knowledge."</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">The Writing & Reading Problem</h3>
+
+                <div class="comparison">
+                    <div class="comparison-item comparison-item--bad">
+                        <p class="comparison-label">Natural tendency (4 in 5 people)</p>
+                        <ul>
+                            <li>Chat rapidly with the LLM</li>
+                            <li>Skim the output quickly</li>
+                            <li>Iterate through conversation</li>
+                        </ul>
+                        <p><em>Feels productive but often isn't.</em></p>
+                    </div>
+                    <div class="comparison-item comparison-item--good">
+                        <p class="comparison-label">What works better</p>
+                        <ul>
+                            <li>Write more slowly and deliberately</li>
+                            <li>Read outputs carefully and completely</li>
+                            <li>Edit in a text editor before sending</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </article>
+
+    <!-- Tools & Prompts -->
+    <article class="chapter" id="tools">
+        <div class="container">
+            <header class="chapter-header">
+                <div class="chapter-number">+</div>
+                <p class="chapter-label">Reference</p>
+                <h2 class="chapter-title">Tools & Starter Prompts</h2>
+            </header>
+
+            <p class="chapter-intro">
+                Setup requirements, observed reliability, and copy-paste templates to get started.
+            </p>
+
+            <section class="section">
+                <h3 class="section-title">CLI Reliability (Observed)</h3>
+                <p>From course observations, satisfaction roughly followed this order:</p>
+                <p style="font-size: 1.3rem; font-family: 'Cormorant Garamond', serif; text-align: center; margin: 2rem 0;">
+                    <strong>Claude CLI</strong> › Codex CLI › Gemini CLI
+                </p>
+                <p>But: the landscape shifts constantly. Pick one tool, learn it well, use it consistently. Revisit quarterly.</p>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Required Accounts & Tools</h3>
+                <ul>
+                    <li><strong>GitHub Account</strong> — Create free account at github.com</li>
+                    <li><strong>Netlify Account</strong> — Create free account at netlify.com</li>
+                    <li><strong>Agentic CLI Access</strong> — Usually requires a paid tier ($20/mo typical)</li>
+                    <li><strong>Editor</strong> — VS Code (standard choice)</li>
+                </ul>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Observed Project Data</h3>
+
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Project</th>
+                                <th>Time</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>CV website (Gemini CLI)</td>
+                                <td>5-6 hours</td>
+                                <td>Main time: installation/troubleshooting</td>
+                            </tr>
+                            <tr>
+                                <td>Expense tracker</td>
+                                <td>6 hours</td>
+                                <td>Budget management features</td>
+                            </tr>
+                            <tr>
+                                <td>Website prototype #1</td>
+                                <td>3.5 hours</td>
+                                <td></td>
+                            </tr>
+                            <tr>
+                                <td>Website prototype #2</td>
+                                <td>1 hour</td>
+                                <td>After completing #1</td>
+                            </tr>
+                            <tr>
+                                <td>Technical architecture doc</td>
+                                <td>3-4 hours</td>
+                                <td>3-4 pages with research</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="callout">
+                    <p class="callout-title">Pattern: Second Attempt Is Faster</p>
+                    <p>First website: 3.5 hours → Second website: 1 hour. The learning compounds.</p>
+                </div>
+            </section>
+
+            <section class="section">
+                <h3 class="section-title">Starter Prompts</h3>
+
+                <div class="prompt-box">
+                    <p style="margin-bottom: 0.5rem; font-weight: 600; color: var(--gold);">For Briefing Document Creation</p>
+                    <pre><code>I want to create a [type of application/tool].
+
+Ask me questions to understand:
+- What problem this solves
+- Who will use it
+- What the essential features are
+- What can wait for version 2
+- Any constraints I'm working with
+
+Don't make technology choices yet. Focus on understanding
+the problem and requirements first.
+
+After you understand the requirements, create a briefing
+document I can hand to Claude Code for implementation.</code></pre>
+                </div>
+
+                <div class="prompt-box">
+                    <p style="margin-bottom: 0.5rem; font-weight: 600; color: var(--gold);">For Research Phase</p>
+                    <pre><code>Before I finalize this architecture, I need to verify
+my assumptions.
+
+Based on this briefing document: [paste briefing]
+
+What are the top 10 assumptions this plan makes about
+external systems, APIs, or capabilities?
+
+For each assumption, help me verify whether it's actually
+true by:
+- Citing official documentation
+- Identifying specific limitations or constraints
+- Flagging anything that can't be verified</code></pre>
+                </div>
+
+                <div class="prompt-box">
+                    <p style="margin-bottom: 0.5rem; font-weight: 600; color: var(--gold);">For Architecture Document</p>
+                    <pre><code>Based on this confirmed research: [paste research findings]
+
+Create an architecture document that:
+1. References specific verified capabilities
+2. Justifies each technology choice
+   (what alternatives, why this one)
+3. Explicitly marks any remaining assumptions
+4. Stays under [X] pages
+
+For each technology choice, include 1-2 sentences explaining:
+- What alternatives existed
+- Why this option was selected
+- What trade-offs we're accepting</code></pre>
+                </div>
+            </section>
+        </div>
+    </article>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container footer-content">
+            <h3>The AI Workflow</h3>
+            <p>A practitioner's guide to working with LLM-powered tools. From operator to manager. From doing to directing.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Navigation visibility on scroll
+        const nav = document.getElementById('nav');
+        const progress = document.getElementById('progress');
+        const currentSection = document.getElementById('currentSection');
+        let lastScrollY = 0;
+
+        window.addEventListener('scroll', () => {
+            const scrollY = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+
+            // Show nav after hero
+            if (scrollY > window.innerHeight * 0.5) {
+                nav.classList.add('visible');
+            } else {
+                nav.classList.remove('visible');
+            }
+
+            // Update progress bar
+            const scrollPercent = (scrollY / docHeight) * 100;
+            progress.style.width = `${scrollPercent}%`;
+
+            lastScrollY = scrollY;
+        });
+
+        // Chapter visibility on scroll
+        const chapters = document.querySelectorAll('.chapter');
+        const observerOptions = {
+            root: null,
+            rootMargin: '-10% 0px -10% 0px',
+            threshold: 0.1
+        };
+
+        const chapterObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+
+                    // Update current section in nav
+                    const title = entry.target.querySelector('.chapter-title');
+                    if (title) {
+                        currentSection.textContent = title.textContent;
+                    }
+                }
+            });
+        }, observerOptions);
+
+        chapters.forEach(chapter => {
+            chapterObserver.observe(chapter);
+        });
+
+        // Accordion functionality
+        const accordionHeaders = document.querySelectorAll('.accordion-header');
+        accordionHeaders.forEach(header => {
+            header.addEventListener('click', () => {
+                const item = header.parentElement;
+                const isOpen = item.classList.contains('open');
+
+                // Close all
+                document.querySelectorAll('.accordion-item').forEach(i => {
+                    i.classList.remove('open');
+                });
+
+                // Open clicked if it was closed
+                if (!isOpen) {
+                    item.classList.add('open');
+                }
+            });
+        });
+
+        // Smooth scroll for TOC links
+        document.querySelectorAll('.toc-item').forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                const targetId = link.getAttribute('href');
+                const target = document.querySelector(targetId);
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
