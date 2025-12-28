@@ -1977,6 +1977,20 @@ For each technology choice, include 1-2 sentences explaining:
             chapterObserver.observe(chapter);
         });
 
+        // Handle direct navigation to hash URLs - make target chapter visible immediately
+        function revealHashTarget() {
+            if (window.location.hash) {
+                const target = document.querySelector(window.location.hash);
+                if (target && target.classList.contains('chapter')) {
+                    target.classList.add('visible');
+                }
+            }
+        }
+
+        // Run on page load and hash change
+        revealHashTarget();
+        window.addEventListener('hashchange', revealHashTarget);
+
         // Accordion functionality
         const accordionHeaders = document.querySelectorAll('.accordion-header');
         accordionHeaders.forEach(header => {
